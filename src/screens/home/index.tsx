@@ -16,6 +16,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { createChatListStyles } from '@/theme/createChatListStyles';
 import { AppPopover } from '@/components/layout/popover';
 import { useNavigation } from '@react-navigation/native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import { DrawerNavigationProp } from '@react-navigation/drawer';
 import { useDataContext } from '@/store/useDataContext';
 import { useDMs } from '@/services/chat/chat-lists';
@@ -28,6 +29,7 @@ import GeneralNotificationConnection from '@/centrifugoo/general-notification-co
 import { OneSignal } from 'react-native-onesignal';
 import { ONESIGNAL_APP_ID } from '@env';
 import { PostRequest, PutRequest } from '@/utils/requests';
+import { ShowNotify } from '@/components/ui/toast';
 import { RootStackParamList } from '@/navigation/navigator';
 import { UserAvatarWithStatus } from '@/components/ui/user-avatar-with-status';
 import { formatPreviewMessage } from '@/utils/message-text';
@@ -79,6 +81,26 @@ const HomeScreen = () => {
         return dms;
     }
   }, [dms, activeCategory]);
+
+  const handleToggleFavourite = async (chat: Chat) => {
+    if (!orgId || !chat?.channel_id) return;
+    const { error } = await PostRequest(
+      `/organisations/${orgId}/dms/${chat.channel_id}/favourite`,
+      {},
+    );
+    if (error) {
+      ShowNotify('Error', 'Failed to update favourites');
+      return;
+    }
+    dispatch({
+      type: ACTIONS.DMS,
+      payload: (dms || []).map((item: Chat) =>
+        item.channel_id === chat.channel_id
+          ? { ...item, is_favourite: !item.is_favourite }
+          : item,
+      ),
+    });
+  };
 
   const handleNavigate = (props: Chat) => {
     if (props?.channel_type === 'dm') {
@@ -326,6 +348,25 @@ const HomeScreen = () => {
                             sameElse: 'DD/MM/YYYY',
                           })}
                         </AppText>
+                        <TouchableOpacity
+                          onPress={() => handleToggleFavourite(item)}
+                          accessibilityRole="button"
+                          accessibilityLabel={
+                            item.is_favourite
+                              ? 'Remove from favourites'
+                              : 'Add to favourites'
+                          }
+                        >
+                          <Ionicons
+                            name={item.is_favourite ? 'star' : 'star-outline'}
+                            size={18}
+                            color={
+                              item.is_favourite
+                                ? colors.primary
+                                : colors.textMuted
+                            }
+                          />
+                        </TouchableOpacity>
                       </View>
 
                       <View style={styles.chatFooterRow}>
