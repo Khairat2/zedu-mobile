@@ -41,9 +41,10 @@ export const MessageAction = forwardRef<
     item: any;
     onClose: () => void;
     handleEdit: () => void;
+    onSelect?: () => void;
     threadChatType?: ThreadChatType;
   }
->(({ item, onClose, handleEdit, threadChatType = 'dm' }, ref) => {
+>(({ item, onClose, handleEdit, onSelect, threadChatType = 'dm' }, ref) => {
   const { colors } = useTheme();
   const styles = useMemo(() => createMessageActionStyles(colors), [colors]);
   const emojiPickerTheme = useMemo(
@@ -358,6 +359,16 @@ export const MessageAction = forwardRef<
                 icon={require('@/assets/icons/copy.png')}
                 handleClick={handleCopyMessage}
               />
+              {onSelect && (
+                <ActionItem
+                  label="Select Messages"
+                  icon={require('@/assets/icons/select.png')}
+                  handleClick={() => {
+                    onSelect();
+                    closeSheet();
+                  }}
+                />
+              )}
               <ActionItem
                 label="Copy link to Message"
                 icon={require('@/assets/icons/link.png')}

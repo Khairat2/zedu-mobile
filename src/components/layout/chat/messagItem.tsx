@@ -34,6 +34,9 @@ const MessageItem = ({
   index,
   messages,
   onLongPress,
+  onPress,
+  selectionMode,
+  selected,
   editMsgId,
   onEdit,
 }: any) => {
@@ -266,11 +269,13 @@ const MessageItem = ({
 
       <TouchableOpacity
         activeOpacity={0.5}
-        onLongPress={() => onLongPress(item)}
+        onPress={onPress}
+        onLongPress={selectionMode ? undefined : () => onLongPress(item)}
         // delayLongPress={200}
         style={[
           styles.messageWrapper,
           item.sent ? styles.sentWrapper : styles.receivedWrapper,
+          selectionMode && selected ? { opacity: 0.7 } : undefined,
         ]}
       >
         <View

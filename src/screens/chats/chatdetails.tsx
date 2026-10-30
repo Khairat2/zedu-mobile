@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Keyboard,
   ActivityIndicator,
+  Clipboard,
 } from 'react-native';
 import { AppText } from '@/components/ui/text';
 import Container from '@/components/layout/container';
@@ -52,6 +53,8 @@ const ChatDetailScreen = ({ navigation }: any) => {
   const actionSheetRef = useRef<any>(null);
   const pickerSheetRef = useRef<any>(null);
   const [selectedMsg, setSelectedMsg] = useState<ChatItem | null>(null);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedMessageIds, setSelectedMessageIds] = useState<string[]>([]);
   const [pendingMedia, setPendingMedia] = useState<any>(null);
   const [isEditorVisible, setIsEditorVisible] = useState(false);
 
@@ -421,6 +424,46 @@ const ChatDetailScreen = ({ navigation }: any) => {
     setSelectedMsg(item);
   };
 
+  const handleToggleMessageSelection = (item: any) => {
+    const id = item?.thread_id;
+    if (!id) return;
+    setSelectedMessageIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id],
+    );
+  };
+
+  const handleSelectMessage = (item: any) => {
+    setSelectionMode(true);
+    handleToggleMessageSelection(item);
+    setSelectedMsg(null);
+  };
+
+  const handleCancelSelection = () => {
+    setSelectionMode(false);
+    setSelectedMessageIds([]);
+  };
+
+  const handleCopySelectedMessages = async () => {
+    const selected = (dmsChat || [])
+      .filter((m: any) => selectedMessageIds.includes(m.thread_id))
+      .reverse();
+    const text = selected
+      .map((m: any) => getPlainMessageText(m.message || ''))
+      .filter(Boolean)
+      .join('\n');
+    if (!text) {
+      ShowNotify('Error', 'Nothing to copy');
+      return;
+    }
+    try {
+      Clipboard.setString(text);
+      ShowNotify('Success', 'Messages copied to clipboard');
+      handleCancelSelection();
+    } catch {
+      ShowNotify('Error', 'Failed to copy messages');
+    }
+  };
+
   const handleEdit = () => {
     if (selectedMsg) {
       setOnEdit(true);
@@ -521,6 +564,11 @@ const ChatDetailScreen = ({ navigation }: any) => {
               index={index}
               messages={dmsChat}
               onLongPress={() => handleLongPress(item)}
+              onPress={
+                selectionMode ? () => handleToggleMessageSelection(item) : undefined
+              }
+              selectionMode={selectionMode}
+              selected={selectedMessageIds.includes(item.thread_id)}
               editMsgId={editMsgId}
               onEdit={onEdit}
             />
@@ -539,6 +587,35 @@ const ChatDetailScreen = ({ navigation }: any) => {
           ) : null
         }
       />
+
+      {selectionMode && (
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingHorizontal: 16,
+            paddingVertical: 10,
+            backgroundColor: colors.secondary,
+          }}
+        >
+          <AppText variant="medium" size={14}>
+            {selectedMessageIds.length} selected
+          </AppText>
+          <View style={{ flexDirection: 'row', gap: 16 }}>
+            <TouchableOpacity onPress={handleCopySelectedMessages}>
+              <AppText variant="medium" size={14} style={{ color: colors.primary }}>
+                Copy
+              </AppText>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleCancelSelection}>
+              <AppText variant="medium" size={14} style={{ color: colors.error }}>
+                Cancel
+              </AppText>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
 
       <ChatKeyboardAvoidingView>
         {mentionState && (
@@ -587,6 +664,7 @@ const ChatDetailScreen = ({ navigation }: any) => {
         item={selectedMsg}
         onClose={() => setSelectedMsg(null)}
         handleEdit={handleEdit}
+        onSelect={() => selectedMsg && handleSelectMessage(selectedMsg)}
       />
       <MediaPickerSheet
         ref={pickerSheetRef}
